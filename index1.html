@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AntiRot Pro - منصة التعافي الرقمي بالألعاب</title>
+    
+    <style>
+        /* التنسيق والألوان (Deep Blue Mode) */
+        :root {
+            --bg-color: #0b0f19;    
+            --card-bg: #151f32;     
+            --accent-cyan: #22d3ee; 
+            --accent-purple: #a855f7;
+            --text-main: #f8fafc;    
+            --text-muted: #94a3b8;   
+            --accent-green: #22c55e;
+            --accent-yellow: #f59e0b;
+            --accent-pink: #f472b6;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0;
+            overflow-x: hidden; min-height: 100vh;
+        }
+
+        /* --- شاشة إنشاء الحساب والتخصيص --- */
+        #auth-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #111827 0%, #0b0f19 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 2000; text-align: center;
+        }
+        .auth-card { background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.1); padding: 40px; border-radius: 28px; width: 90%; max-width: 450px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .auth-card h2 { margin-bottom: 20px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .input-field { width: 100%; padding: 14px; margin: 10px 0 20px; background: #0f172a; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; font-size: 1rem; box-sizing: border-box; outline: none; }
+        .input-field:focus { border-color: var(--accent-cyan); }
+        select.input-field { color: var(--text-muted); }
+
+        /* --- شاشة الترحيب السينمائية --- */
+        #welcome-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #111827 0%, #0b0f19 100%); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: all 0.6s; text-align: center; }
+        .emoji-side-container { position: absolute; top: 0; width: 25%; height: 100%; overflow: hidden; pointer-events: none; }
+        #emojis-left { left: 0; } #emojis-right { right: 0; }
+        .floating-emoji { position: absolute; font-size: 2.5rem; animation: floatUpDown 6s ease-in-out infinite; opacity: 0.6; }
+        @keyframes floatUpDown { 0% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-25px) rotate(10deg); } 100% { transform: translateY(0px) rotate(0deg); } }
+
+        /* --- محتوى التطبيق الأساسي --- */
+        #main-app { display: none; opacity: 0; transition: opacity 0.8s ease; padding: 20px; flex-direction: column; align-items: center; }
+
+        /* لوحة معلومات المستخدم */
+        .user-dashboard {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 95%; max-width: 700px; background: var(--card-bg);
+            padding: 15px 25px; border-radius: 20px; margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap; gap: 15px;
+        }
+        .stats-group { display: flex; gap: 15px; }
+        .streak-badge { background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); padding: 8px 16px; border-radius: 50px; font-weight: bold; }
+        .stars-badge { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); padding: 8px 16px; border-radius: 50px; font-weight: bold; }
+
+        /* تخطيط الصفحة */
+        .app-container { display: flex; width: 95%; max-width: 950px; gap: 30px; align-items: flex-start; }
+        .main-content-area { flex: 1; }
+        
+        /* حاوية الشخصية الـ 3D التفاعلية */
+        .avatar-sidebar {
+            width: 220px; background: var(--card-bg); border-radius: 24px; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+            position: sticky; top: 20px;
+        }
+
+        /* تصميم الكائن ثلاثي الأبعاد بالـ CSS */
+        .scene-3d { width: 120px; height: 160px; margin: 20px 0; perspective: 600px; position: relative; }
+        .robot-3d {
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+            transform: rotateX(-10deg) rotateY(20deg); transition: transform 0.5s, animation 0.5s;
+        }
+        
+        /* حالات الأنيميشن للشخصية */
+        .robot-happy { animation: jumpCelebrate 0.6s ease infinite alternate; }
+        .robot-sad { animation: shakeSad 0.5s ease infinite; transform: rotateX(20deg) rotateY(0deg) translateY(10px) !important; }
+        .robot-idle { animation: floatRobot 3s ease-in-out infinite alternate; }
+
+        @keyframes floatRobot { 0% { transform: rotateX(-10deg) rotateY(20deg) translateY(0px); } 100% { transform: rotateX(-10deg) rotateY(10deg) translateY(-10px); } }
+        @keyframes jumpCelebrate { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.05) translateY(-25px) rotateY(180deg); } }
+        @keyframes shakeSad { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotateZ(-3deg); } 75% { transform: translateX(4px) rotateZ(3deg); } }
+
+        .robot-body {
+            position: absolute; width: 90px; height: 90px; background: linear-gradient(135deg, var(--accent-cyan), #06b6d4);
+            border-radius: 24px; left: 15px; top: 35px; box-shadow: inset -10px -10px 20px rgba(0,0,0,0.3);
+        }
+        .robot-eye {
+            position: absolute; width: 14px; height: 14px; background: #fff; border-radius: 50%; top: 25px;
+            box-shadow: 0 0 10px var(--accent-cyan); display: flex; align-items: center; justify-content: center;
+        }
+        .robot-eye::after { content: ''; width: 6px; height: 6px; background: #000; border-radius: 50%; }
+        .eye-left { right: 22px; } .eye-right { right: 52px; }
+        
+        /* فم الشخصية */
+        .robot-mouth { position: absolute; width: 30px; height: 10px; border: 3px solid #fff; border-radius: 0 0 15px 15px; border-top: none; top: 48px; right: 28px; transition: 0.3s; }
+        .sad-mouth { border-radius: 15px 15px 0 0 !important; border-bottom: none !important; border-top: 3px solid #fff !important; top: 54px !important; }
+
+        /* إكسسوارات المتجر المحدثة أنثوياً */
+        .item-glasses { position: absolute; width: 56px; height: 16px; background: rgba(0,0,0,0.85); top: 24px; right: 15px; border-radius: 4px; border-bottom: 3px solid red; display: none; z-index: 10; }
+        .item-hat { position: absolute; width: 70px; height: 20px; background: #1e293b; top: 15px; right: 10px; border-radius: 50px 50px 0 0; display: none; z-index: 10; }
+        .item-hat::after { content: '🎓'; position: absolute; top: -15px; right: 22px; font-size: 1.5rem; }
+        .item-scarf { position: absolute; width: 70px; height: 15px; background: var(--accent-purple); top: 120px; right: 10px; border-radius: 4px; display: none; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .item-crown { position: absolute; top: -12px; right: 22px; font-size: 2rem; display: none; z-index: 15; animation: bounce 2s infinite alternate; }
+        
+        /* الفيونكة والقطة المضافة للمحاكي */
+        .item-bow { position: absolute; top: 30px; left: -5px; font-size: 1.8rem; display: none; z-index: 15; filter: drop-shadow(0 0 5px var(--accent-pink)); }
+        .item-cat { position: absolute; bottom: 10px; right: -25px; font-size: 1.8rem; display: none; z-index: 15; animation: bounce 2.5s infinite alternate; }
+
+        @keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-5px); } }
+
+        /* التبويبات والأزرار */
+        .tabs-nav { display: flex; gap: 10px; background: var(--card-bg); padding: 8px; border-radius: 50px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); flex-wrap: wrap; justify-content: center; }
+        .tab-btn { background: none; border: none; color: var(--text-muted); padding: 12px 20px; cursor: pointer; border-radius: 25px; font-size: 0.95rem; font-weight: bold; transition: 0.3s; }
+        .tab-btn.active { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); color: white; }
+        .tab-content { display: none; animation: slideUp 0.5s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); margin-bottom: 25px; }
+
+        /* المؤقت المطور للتحدي */
+        .challenge-timer { font-size: 3.5rem; font-weight: bold; color: var(--accent-cyan); font-family: monospace; margin: 15px 0; letter-spacing: 2px; }
+
+        /* قائمة المهمات */
+        .task-list { text-align: right; margin-top: 15px; }
+        .task-item { display: flex; align-items: center; gap: 15px; background: #0f172a; padding: 15px; border-radius: 14px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .task-item.completed { border-color: var(--accent-green); opacity: 0.6; }
+        .task-item.completed span { text-decoration: line-through; color: var(--text-muted); }
+        .task-checkbox { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent-green); }
+
+        /* شبكة المتجر */
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .shop-item { background: #0f172a; border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; text-align: center; transition: 0.3s; display: flex; flex-direction: column; justify-content: space-between; }
+        .shop-item span { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .shop-btn { background: #1e293b; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; font-weight: bold; margin-top: 8px; }
+        .shop-btn.buy { background: var(--accent-yellow); color: #000; }
+        .shop-btn.equip { background: var(--accent-cyan); color: #000; }
+
+        .graveyard-box { background: #1c1917; border: 2px dashed #78716c; border-radius: 16px; padding: 20px; margin-top: 25px; text-align: right; display: none; }
+        .quiz-option { background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.05); border-radius: 14px; padding: 15px; margin: 12px 0; cursor: pointer; text-align: right; transition: 0.3s; }
+        .quiz-option:hover { border-color: var(--accent-cyan); background: rgba(34, 211, 238, 0.05); }
+        
+        /* تحدي الملل */
+        .boredom-box { background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(34, 211, 238, 0.05)); border: 1px dashed var(--accent-purple); border-radius: 16px; padding: 25px; text-align: center; margin-top: 15px; }
+        .boredom-btn { background: #1e1b4b; color: var(--accent-cyan); border: 1px solid var(--accent-cyan); padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: bold; margin: 10px 5px; transition: 0.3s; font-size: 1rem; }
+        .boredom-btn:hover { background: var(--accent-cyan); color: #000; }
+        .boredom-btn.danger { border-color: #ef4444; color: #ef4444; background: transparent; }
+        .boredom-btn.danger:hover { background: #ef4444; color: #fff; }
+
+        .main-btn { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); color: white; font-weight: bold; border: none; padding: 15px 40px; border-radius: 15px; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
+        .main-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(34, 211, 238, 0.4); }
+        input[type="number"] { background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.1); color: white; padding: 15px; border-radius: 14px; width: 80%; text-align: center; font-size: 1.2rem; }
+        
+        /* دائرة النسبة المئوية الملونة للنتيجة */
+        .percentage-display { font-size: 4rem; font-weight: 900; margin: 15px 0; background: linear-gradient(135deg, #ff6b6b, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: Arial, sans-serif; }
+
+        /* نمط صندوق الخطة العلاجية المطور */
+        .treatment-plan-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: right;
+        }
+        .treatment-plan-box h3 { margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        .treatment-plan-box ul { padding-right: 20px; margin: 10px 0 0 0; line-height: 1.7; color: #cbd5e1; }
+
+        /* أزرار التحكم الطائرة في الأسفل */
+        .floating-controls { position: fixed; bottom: 25px; left: 25px; z-index: 999; display: flex; gap: 10px; }
+        .control-btn { background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--accent-cyan); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.3s; }
+        .control-btn.reset { color: #ef4444; }
+
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column-reverse; }
+            .avatar-sidebar { width: 100%; box-sizing: border-box; position: relative; top: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h2>إنشاء ملف التعافي 🛠️</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">سجلي بياناتكِ لتخصيص رفيقكِ الرقمي والـ Streak</p>
+            <input type="text" id="username-input" class="input-field" placeholder="أدخلي اسمكِ هنا...">
+            <select id="addiction-input" class="input-field">
+                <option value="" disabled selected>ما هو أكثر تطبيق يشتتكِ؟</option>
+                <option value="تيك توك / ريلز">تيك توك / ريلز</option>
+                <option value="إنستغرام">إنستغرام</option>
+                <option value="الألعاب الإلكترونية">الألعاب الإلكترونية</option>
+            </select>
+            <button class="main-btn" style="width: 100%;" onclick="saveProfile()">تشغيل المحاكي 🤖</button>
+        </div>
+    </div>
+
+    <div id="welcome-screen">
+        <div id="emojis-left" class="emoji-side-container"></div>
+        <div id="emojis-right" class="emoji-side-container"></div>
+        <div id="welcome-content">
+            <h1 style="font-size: 5rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin:0;">AntiRot</h1>
+            <p id="welcome-user-text">مرحباً بكِ في واجهة استعادة الوعي وإدارة خلايا الدماغ.</p>
+            <button class="main-btn" style="font-size: 1.3rem; padding: 18px 45px;" onclick="startApp()">فتح النظام 🚀</button>
+        </div>
+    </div>
+
+    <div id="main-app">
+        
+        <div class="user-dashboard">
+            <div><span style="color: var(--text-muted);">المستخدم المعتمد:</span> <strong id="display-name" style="color: var(--accent-cyan);">فاطمة</strong></div>
+            <div class="stats-group">
+                <div class="streak-badge">🔥 الـ Streak: <span id="streak-count">1</span> يوم</div>
+                <div class="stars-badge">⭐ الرصيد: <span id="stars-count">0</span> نجمة</div>
+            </div>
+        </div>
+
+        <div class="app-container">
+            
+            <div class="main-content-area">
+                <nav class="tabs-nav">
+                    <button class="tab-btn active" onclick="openTab(event, 'tasks-tab')">🎯 مهمات اليوم</button>
+                    <button class="tab-btn" onclick="openTab(event, 'boredom-tab')">⏳ تحدي الـ 60 دقيقة</button>
+                    <button class="tab-btn" onclick="openTab(event, 'shop-tab')">🛒 متجر الرفيق</button>
+                    <button class="tab-btn" onclick="openTab(event, 'quiz-tab')">🧪 مقياس التعفن</button>
+                    <button class="tab-btn" onclick="openTab(event, 'calc-tab')">📊 حاسبة الوقت</button>
+                </nav>
+
+                <div id="tasks-tab" class="tab-content active">
+                    <div class="card">
+                        <h2>مهمات استعادة العقل الحالية 📅</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">بمجرد إتمام المهمة سيفرح رفيقكِ وتكسبين <strong style="color: var(--accent-yellow)">15 نجمة كاملة</strong> فوراً!</p>
+                        <div class="task-list">
+                            <div class="task-item" id="task1-box">
+                                <input type="checkbox" class="task-checkbox" id="task1" onchange="completeTask('task1')">
+                                <span>وضع الجوال في غرفة أخرى تماماً أثناء الدراسة/العمل (ساعة كاملة).</span>
+                            </div>
+                            <div class="task-item" id="task2-box">
+                                <input type="checkbox" class="task-checkbox" id="task2" onchange="completeTask('task2')">
+                                <span>تناول وجبة رئيسية كاملة وتأمل الطعام بدون شاشات نهائياً.</span>
+                            </div>
+                            <div class="task-item" id="task3-box">
+                                <input type="checkbox" class="task-checkbox" id="task3" onchange="completeTask('task3')">
+                                <span>إغلاق التطبيق المشتت فوراً بمجرد وعيكِ بالـ Doomscrolling العشوائي.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="boredom-tab" class="tab-content">
+                    <div class="card">
+                        <h2>تحدي الـ 60 دقيقة لمقاومة الملل والـ Rot ⏱️</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">هل تمرين بلحظة ملل قاتلة وتكاد يدكِ تفتح التطبيق المشتت؟ أثبتي قوتكِ الآن! ابدئي مؤقت الـ 60 دقيقة، وإذا صمدتِ بدون إغلاق الصفحة أو لمس الهاتف، ستحصلين على <strong style="color: var(--accent-yellow);">30 نجمة مكافأة ملحمية!</strong></p>
+                        
+                        <div class="boredom-box">
+                            <div class="challenge-timer" id="boredom-timer">60:00</div>
+                            <h3 id="challenge-display" style="color: var(--accent-cyan); margin: 15px 0; font-size: 1.1rem;">اضغطي أدناه لبدء التحدي الفوري وتوليد فكرة بديلة للملل!</h3>
+                            
+                            <div style="margin-top: 15px;">
+                                <button class="boredom-btn" id="start-boredom-btn" onclick="startBoredomChallenge()">ابدأ التحدي الصارم 🎯</button>
+                                <button class="boredom-btn danger" id="cancel-boredom-btn" onclick="failBoredomChallenge()" style="display:none;">استسلام (خسارة النجوم) 💀</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="shop-tab" class="tab-content">
+                    <div class="card">
+                        <h2>خزانة ومتجر الرفيق الأنيق 🛒</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">اشتري الإكسسوارات اللطيفة والمميزة لرفيقك الصغير باستخدام النجوم المجمعة!</p>
+                        <div class="shop-grid">
+                            <div class="shop-item">
+                                <span>🕶️</span>
+                                <strong>نظارة شمسية فخمة</strong>
+                                <button class="shop-btn buy" id="btn-glasses" onclick="handleShop('glasses', 5)">شراء بـ 5 ⭐</button>
+                            </div>
+                            <div class="shop-item">
+                                <span>🎓</span>
+                                <strong>قبعة التخرج المذهلة</strong>
+                                <button class="shop-btn buy" id="btn-hat" onclick="handleShop('hat', 15)">شراء بـ 15 ⭐</button>
+                            </div>
+                            <div class="shop-item">
+                                <span>🧣</span>
+                                <strong>وشاح الأبطال البنفسجي</strong>
+                                <button class="shop-btn buy" id="btn-scarf" onclick="handleShop('scarf', 25)">شراء بـ 25 ⭐</button>
+                            </div>
+                            <div class="shop-item">
+                                <span>👑</span>
+                                <strong>التاج الملكي الذهبي</strong>
+                                <button class="shop-btn buy" id="btn-crown" onclick="handleShop('crown', 40)">شراء بـ 40 ⭐</button>
+                            </div>
+                            <div class="shop-item">
+                                <span>🎀</span>
+                                <strong>فيونكة أنيقة مضيئة</strong>
+                                <button class="shop-btn buy" id="btn-bow" onclick="handleShop('bow', 60)">شراء بـ 60 ⭐</button>
+                            </div>
+                            <div class="shop-item">
+                                <span>🐱</span>
+                                <strong>قطة رفيقة ولطيفة</strong>
+                                <button class="shop-btn buy" id="btn-cat" onclick="handleShop('cat', 100)">شراء بـ 100 ⭐</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quiz-tab" class="tab-content">
+                    <div class="card">
+                        <h2>مقياس التعفن الرقمي والوعي 🧠</h2>
+                        <p style="color: var(--text-muted);" id="question-number">السؤال 1 من 10</p>
+                        <div id="quiz-body">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="calc-tab" class="tab-content">
+                    <div class="card">
+                        <h2>كم من عمركِ يسرقه التصفح العشوائي؟ 🤔</h2>
+                        <input type="number" id="hoursInput" placeholder="عدد الساعات اليومية..." min="1" max="24">
+                        <button class="main-btn" onclick="calculateTime()" style="margin-top:20px;">احسبي كلفة الضياع ⏳</button>
+                        <div id="calcResult" style="margin-top: 25px; font-size: 1.2rem; color: var(--accent-cyan);"></div>
+                        <div class="graveyard-box" id="graveyard">
+                            <h4 style="color: #ef4444; margin:0 0 10px 0;">💀 مقبرة السنين المفقودة:</h4>
+                            <ul id="graveyard-list" style="padding-right:20px; line-height:1.7;"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="avatar-sidebar">
+                <strong style="color: var(--text-main); font-size: 1.1rem;" id="avatar-status-text">الرفيق مستقر 🧘‍♂️</strong>
+                <div class="scene-3d">
+                    <div class="robot-3d robot-idle" id="my-robot">
+                        <div class="item-crown" id="visual-crown">👑</div>
+                        <div class="item-hat" id="visual-hat"></div>
+                        <div class="robot-body">
+                            <div class="item-glasses" id="visual-glasses"></div>
+                            <div class="robot-eye eye-left"></div>
+                            <div class="robot-eye eye-right"></div>
+                            <div class="robot-mouth" id="visual-mouth"></div>
+                        </div>
+                        <div class="item-scarf" id="visual-scarf"></div>
+                        <div class="item-bow" id="visual-bow">🎀</div>
+                        <div class="item-cat" id="visual-cat"></div>
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">أتمي المهام اليومية لجعله سعيداً، وحافظي على الـ Streak لئلا يحزن وينهار رصيدكِ!</p>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="floating-controls">
+        <button class="control-btn" onclick="goBackToWelcome()" title="العودة للشاشة الترحيبية">🏠</button>
+        <button class="control-btn reset" onclick="resetSystemData()" title="تفريغ المحاكي وبدء التقديم للإدارة من الصفر">🔄</button>
+    </div>
+
+    <script>
+        let stars = 0;
+        let inventory = { glasses: false, hat: false, scarf: false, crown: false, bow: false, cat: false };
+        let equipped = { glasses: false, hat: false, scarf: false, crown: false, bow: false, cat: false };
+
+        let boredomInterval = null;
+        let boredomTimeLeft = 3600; 
+        let isChallengeRunning = false;
+
+        const boredomChallenges = [
+            "قم بـ 15 تمرين ضغط أو قفز في مكانك لتنشيط الدورة الدموية 🏃‍♂️",
+            "افتح كتاباً قريباً منك واقرأ صفحة واحدة فقط بتمعن 📚",
+            "قم بترتيب وتنظيف مكتبك أو الطاولة التي أمامك الآن بالكامل ✨",
+            "اشرب كوباً كبيراً من الماء البارد بعيداً عن أي شاشة 💧",
+            "أغمض عينيك وخذ 10 أنفاس عميقة (شهيق من الأنف وزفير بطيء) 🧘‍♂️",
+            "امسك ورقة وقلم وارسم أي كائن عشوائي يقع نظرك عليه ✏️"
+        ];
+
+        // مصفوفة الـ 10 أسئلة المتكاملة
+        const quizQuestions = [
+            {
+                text: "1. كم مرة تفتحين فيها جوالكِ بدون سبب واضح بمجرد شعوركِ بالملل؟",
+                options: [
+                    { text: "أ- دائماً وبشكل تلقائي غير واعٍ طوال اليوم.", score: 3 },
+                    { text: "ب- أحياناً، وقت الفراغ أو هرباً من المهام.", score: 2 },
+                    { text: "ج- نادراً، عندما يأتي تنبيه هام فقط.", score: 1 }
+                ]
+            },
+            {
+                text: "2. ما هو أول شيء تفعلينه فور استيقاظكِ من النوم في الصباح؟",
+                options: [
+                    { text: "أ- أتفقد الإشعارات ومواقع التواصل لأكثر من 15 دقيقة.", score: 3 },
+                    { text: "ب- ألقي نظرة سريعة على الساعة والرسائل الضرورية.", score: 2 },
+                    { text: "ج- لا ألمس الهاتف إلا بعد النهوض وغسل الوجه تماماً.", score: 1 }
+                ]
+            },
+            {
+                text: "3. عندما تدرسين أو تعملين، أين يكون موقع الهاتف المحمول عادةً؟",
+                options: [
+                    { text: "أ- في يدي أو بجانب اللابتوب مباشرة والشاشة تضيء بكل التنبيهات.", score: 3 },
+                    { text: "ب- بجانبي في الغرفة لكنني أحاول كتم الصوت.", score: 2 },
+                    { text: "ج- في غرفة أخرى أو داخل الحقيبة مغلقاً لضمان التركيز السمعي.", score: 1 }
+                ]
+            },
+            {
+                text: "4. هل تلاحظين تراجعاً في قدرتكِ على التركيز وقراءة المقالات الطويلة مؤخراً؟",
+                options: [
+                    { text: "أ- نعم بشكل مخيف، عقلي يمل بسرعة ويبحث عن الفيديوهات القصيرة.", score: 3 },
+                    { text: "ب- تراجع طفيف، لكنني أستطيع المقاومة والتركيز عند الجد.", score: 2 },
+                    { text: "ج- لا، ما زلت أمتلك مهارة التركيز العالي والقراءة الطويلة الصابرة.", score: 1 }
+                ]
+            },
+            {
+                text: "5. كيف تصفين شعوركِ الداخلي عندما ينقطع الإنترنت أو تنفد بطارية الهاتف؟",
+                options: [
+                    { text: "أ- قلق، توتر حاد، وشعور بالفصل والعزلة عن العالم الخارجي.", score: 3 },
+                    { text: "ب- ملل طفيف وانتظار بفارغ الصبر لعودة الخدمة.", score: 2 },
+                    { text: "ج- راحة وهدوء نفسي، وفرصة ممتازة للاسترخاء الحقيقي.", score: 1 }
+                ]
+            },
+            {
+                text: "6. هل تستهلكين فيديوهات الريلز والتيك توك السريعة (Doomscrolling) قبل النوم؟",
+                options: [
+                    { text: "أ- نعم، وأفقد إدراك الوقت لدرجة تأخير نومي لساعات.", score: 3 },
+                    { text: "ب- أحياناً لمدة 10 إلى 20 دقيقة كحد أقصى ترفيهي.", score: 2 },
+                    { text: "ج- مستحيل، أمنع الشاشات قبل النوم بنصف ساعة على الأقل.", score: 1 }
+                ]
+            },
+            {
+                text: "7. عند تناولكِ لوجبات الطعام الرئيسية، هل ترافقكِ الشاشات دائماً؟",
+                options: [
+                    { text: "أ- نعم، لا أستمتع بالأكل أبداً بدون تشغيل فيديو أو مسلسل.", score: 3 },
+                    { text: "ب- أحياناً بحسب الوجبة أو إذا كنت وحيدة بالمنزل.", score: 2 },
+                    { text: "ج- نادراً، أفضل التركيز على الطعام والتحدث مع العائلة.", score: 1 }
+                ]
+            },
+            {
+                text: "8. كم عدد الساعات التقريبية التي يقضيها عقلكِ خلف الشاشة يومياً للتسلية؟",
+                options: [
+                    { text: "أ- أكثر من 5 ساعات كاملة وعشوائية.", score: 3 },
+                    { text: "ب- ما بين ساعتين إلى 4 ساعات متفاوتة.", score: 2 },
+                    { text: "ج- أقل من ساعتين وموجهة لأهداف محددة.", score: 1 }
+                ]
+            },
+            {
+                text: "9. هل شعرتِ يوماً بـ 'اهتزاز الهاتف الوهمي' في جيبكِ وهو لم يهتز أصلاً؟",
+                options: [
+                    { text: "أ- نعم، يتكرر هذا الشعور الغريب معي بكثرة.", score: 3 },
+                    { text: "ب- حدث مرة أو مرتين على فترات متباعدة.", score: 2 },
+                    { text: "ج- لا، لم ألاحظ هذا العرض النفسي إطلاقاً.", score: 1 }
+                ]
+            },
+            {
+                text: "10. ما مدى استعدادكِ النفسي لتجربة الصيام الرقمي أو إغلاق التطبيقات المشتتة الآن؟",
+                options: [
+                    { text: "أ- مترددة وأشعر بصعوبة بالغة في اتخاذ القرار.", score: 3 },
+                    { text: "ب- مستعدة جزئياً وأرغب بالمحاولة التدريجية بالمحاكي.", score: 2 },
+                    { text: "ج- متحمسة وجاهزة فوراً لاستعادة السيطرة الكاملة على ذهني.", score: 1 }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let totalQuizScore = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setupFloatingEmojis();
+            renderCurrentQuestion();
+
+            const savedName = localStorage.getItem('antirot_name');
+            if (savedName) {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('welcome-screen').style.display = 'flex';
+                document.getElementById('display-name').innerText = savedName;
+                document.getElementById('welcome-user-text').innerHTML = `مرحباً بكِ مجدداً يا <strong>${savedName}</strong>.<br>رفيقكِ جاهز تماماً لمساعدتكِ اليوم ومقاومة المشتتات!`;
+                
+                stars = parseInt(localStorage.getItem('antirot_stars')) || 0;
+                inventory = JSON.parse(localStorage.getItem('antirot_inventory')) || inventory;
+                equipped = JSON.parse(localStorage.getItem('antirot_equipped')) || equipped;
+                
+                document.getElementById('stars-count').innerText = stars;
+                updateStreakLogic();
+                loadTasksState();
+                renderShopAndEquipment();
+            } else {
+                document.getElementById('auth-screen').style.display = 'flex';
+                document.getElementById('welcome-screen').style.display = 'none';
+            }
+        });
+
+        function renderCurrentQuestion() {
+            const quizBody = document.getElementById('quiz-body');
+            const questionNumberText = document.getElementById('question-number');
+            
+            if (currentQuestionIndex < quizQuestions.length) {
+                const currentQuestion = quizQuestions[currentQuestionIndex];
+                questionNumberText.innerText = `السؤال ${currentQuestionIndex + 1} من ${quizQuestions.length}`;
+                
+                let optionsHtml = `<h3 id="question-text" style="margin: 20px 0; text-align: right;">${currentQuestion.text}</h3>`;
+                currentQuestion.options.forEach(option => {
+                    optionsHtml += `<div class="quiz-option" onclick="handleAnswerSelection(${option.score})">${option.text}</div>`;
+                });
+                
+                quizBody.innerHTML = optionsHtml;
+            } else {
+                showFinalDiagnosis();
+            }
+        }
+
+        function handleAnswerSelection(score) {
+            totalQuizScore += score;
+            currentQuestionIndex++;
+            renderCurrentQuestion();
+        }
+
+        // دالة إظهار التشخيص المعدلة بالنسب الجديدة تماماً ومكافأة الفئات برمجياً
+        function showFinalDiagnosis() {
+            const quizBody = document.getElementById('quiz-body');
+            const questionNumberText = document.getElementById('question-number');
+            questionNumberText.innerText = "التشخيص الرقمي النهائي والخطة العلاجية 🧪";
+            
+            let percentage = Math.round(((totalQuizScore - 10) / 20) * 100);
+            if (percentage < 0) percentage = 0;
+
+            let resultTitle = "";
+            let resultColor = "";
+            let resultDesc = "";
+            let treatmentPlanHtml = ""; 
+            
+            // الفئة الثالثة: الخطة الشديدة (من 85% إلى 100%)
+            if (percentage >= 85) {
+                resultTitle = `المستوى الثالث: تعفن دماغ شديد وحاد (${percentage}%) 🚨`;
+                resultColor = "#ef4444"; 
+                resultDesc = "العقل مستهلك تماماً بفيضان الدوبامين السريع، والانتباه مشتت بشكل كلي ومزمن. المحاكي يوصي بتدخل صارم لاسترجاع السيطرة الواعية والوظائف الإدراكية فوراً.";
+                
+                treatmentPlanHtml = `
+                    <div class="treatment-plan-box" style="border-color: #ef4444;">
+                        <h3 style="color: #ef4444;">📋 خطة العلاج الشديدة والمكثفة:</h3>
+                        <ul>
+                            <li><strong>الصيام الرقمي التام:</strong> حذف التطبيقات الترفيهية المشتتة فوراً لمدة 5 أيام متتالية دون استثناء.</li>
+                            <li><strong>بيئة خالية من المشتتات:</strong> ترك الهاتف المحمول خارج غرفتكِ قبل النوم بـ 60 دقيقة كاملة لمنع التعرض للشاشات.</li>
+                            <li><strong>تمارين الاستقرار:</strong> الالتزام بإتمام تحدي الصمود لـ 60 دقيقة في المحاكي مرتين يومياً لتدريب الدماغ على الملل الطبيعي.</li>
+                        </ul>
+                    </div>
+                `;
+                triggerAvatarReaction('sad');
+
+            // الفئة الثانية: الخطة المتوسطة (من 50% إلى 80%)
+            } else if (percentage >= 50 && percentage <= 80) {
+                resultTitle = `المستوى الثاني: تعفن دماغ متوسط (${percentage}%) ⚖️`;
+                resultColor = "var(--accent-yellow)"; 
+                resultDesc = "هناك ميل واضح للهرب والوقوع في فخ الـ Doomscrolling عند الشعور بالفراغ، لكن الوعي الذاتي لا يزال يعمل ومستعداً للتصحيح.";
+                
+                treatmentPlanHtml = `
+                    <div class="treatment-plan-box" style="border-color: var(--accent-yellow);">
+                        <h3 style="color: var(--accent-yellow);">📋 خطة العلاج المتوسطة والمتوازنة:</h3>
+                        <ul>
+                            <li><strong>تأطير الشاشة:</strong> تحديد وقت استخدام يومي ثابت ومحدد للتطبيقات المشتتة (لا يتجاوز ساعة واحدة).</li>
+                            <li><strong>قواعد الطاولة النظيفة:</strong> منع استخدام الجوال أو تفقد الإشعارات أثناء تناول وجبات الطعام وبصحبة العائلة.</li>
+                            <li><strong>الالتزام بالمهمات:</strong> إنهاء مهمتين يومياً على الأقل داخل لوحة التحكم لجمع النجوم وتطوير سلوك منضبط.</li>
+                        </ul>
+                    </div>
+                `;
+                triggerAvatarReaction('idle');
+
+            // الفئة الأولى: الخطة الاعتيادية/الوقائية (من 0% إلى 45%)
+            } else {
+                resultTitle = `المستوى الأول: تعفن دماغ ضئيل / عقل سليم وواعٍ (${percentage}%) ✨`;
+                resultColor = "var(--accent-green)"; 
+                resultDesc = "تهانينا! قدرتكِ على التحكم بالهاتف والانتباه ممتازة، ومقاومتكِ للتشتت الرقمي تدل على انضباط ذهنكِ ووعيكِ العالي بالوقت.";
+                
+                treatmentPlanHtml = `
+                    <div class="treatment-plan-box" style="border-color: var(--accent-green);">
+                        <h3 style="color: var(--accent-green);">📋 خطة الوقاية والتحصين الرقمي:</h3>
+                        <ul>
+                            <li><strong>المحافظة المستدامة:</strong> الحفاظ على نمط الاستخدام الموجه والذكي للأدوات والشاشات دون الانجرار وراء التصفح اللانهائي.</li>
+                            <li><strong>الإنتاجية المتقدمة:</strong> استغلال صفاء الذهن الحالي في تعلم مهارات واقعية معقدة كالقراءة والبرمجة والتأمل.</li>
+                            <li><strong>مكافأة الرفيق:</strong> تجميع النجوم لاستعراض أحدث الأشكال والأزياء وخزانة الملحقات لرفيقك الصغير ليظل سعيداً.</li>
+                        </ul>
+                    </div>
+                `;
+                triggerAvatarReaction('happy');
+            }
+            
+            quizBody.innerHTML = `
+                <div class="percentage-display" style="background: linear-gradient(135deg, ${resultColor}, var(--accent-purple)); -webkit-background-clip: text;">${percentage}%</div>
+                <h2 style="color:${resultColor}; margin-top: 5px;">${resultTitle}</h2>
+                <p style="line-height: 1.6; color: var(--text-main); text-align: right; margin-top: 15px;">${resultDesc}</p>
+                ${treatmentPlanHtml}
+                <button class="main-btn" style="margin-top: 25px; font-size:0.95rem; padding: 10px 25px;" onclick="resetQuiz()">إعادة الاختبار 🔄</button>
+            `;
+        }
+
+        function resetQuiz() {
+            currentQuestionIndex = 0;
+            totalQuizScore = 0;
+            renderCurrentQuestion();
+        }
+
+        function resetSystemData() {
+            if(confirm("هل تريدين مسح البيانات وإعادة المحاكي لنقطة الصفر من أجل العرض؟")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function saveProfile() {
+            const name = document.getElementById('username-input').value.trim();
+            const target = document.getElementById('addiction-input').value;
+            if(!name || !target) { alert("يرجى ملء البيانات لتهيئة المحاكي!"); return; }
+
+            localStorage.setItem('antirot_name', name);
+            localStorage.setItem('antirot_target', target);
+            localStorage.setItem('antirot_streak', '1');
+            localStorage.setItem('antirot_stars', '0');
+            localStorage.setItem('antirot_last_date', new Date().toDateString());
+            localStorage.setItem('antirot_inventory', JSON.stringify(inventory));
+            localStorage.setItem('antirot_equipped', JSON.stringify(equipped));
+
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('welcome-screen').style.display = 'flex';
+            document.getElementById('display-name').innerText = name;
+            document.getElementById('welcome-user-text').innerHTML = `مرحباً بكِ يا <strong>${name}</strong>.<br>واجهتكِ الرقمية مهيأة الآن للتغلب على إدمان (${target})!`;
+        }
+
+        function startBoredomChallenge() {
+            if(isChallengeRunning) return;
+            
+            isChallengeRunning = true;
+            boredomTimeLeft = 3600; 
+            
+            document.getElementById('start-boredom-btn').style.display = 'none';
+            document.getElementById('cancel-boredom-btn').style.display = 'inline-block';
+            
+            const display = document.getElementById('challenge-display');
+            const randomChallenge = boredomChallenges[Math.floor(Math.random() * boredomChallenges.length)];
+            display.innerHTML = `<strong style="color:var(--accent-purple);">مهمتكِ البديلة لهذه الساعة:</strong><br>${randomChallenge}`;
+            
+            triggerAvatarReaction('happy');
+
+            boredomInterval = setInterval(() => {
+                boredomTimeLeft--;
+                
+                let mins = Math.floor(boredomTimeLeft / 60);
+                let secs = boredomTimeLeft % 60;
+                document.getElementById('boredom-timer').innerText = 
+                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                if(boredomTimeLeft <= 0) {
+                    clearInterval(boredomInterval);
+                    endBoredomChallengeSuccess();
+                }
+            }, 1000);
+        }
+
+        function endBoredomChallengeSuccess() {
+            isChallengeRunning = false;
+            clearInterval(boredomInterval);
+            
+            stars += 30; 
+            document.getElementById('stars-count').innerText = stars;
+            localStorage.setItem('antirot_stars', stars.toString());
+            
+            document.getElementById('start-boredom-btn').style.display = 'inline-block';
+            document.getElementById('cancel-boredom-btn').style.display = 'none';
+            document.getElementById('boredom-timer').innerText = "60:00";
+            document.getElementById('challenge-display').innerText = "انتصار أسطوري! 🎉 نجحتِ في الصمود ساعة كاملة وكسبتِ 30 نجمة!";
+            
+            triggerAvatarReaction('happy');
+        }
+
+        function failBoredomChallenge() {
+            isChallengeRunning = false;
+            clearInterval(boredomInterval);
+            
+            stars = Math.max(0, stars - 5); 
+            document.getElementById('stars-count').innerText = stars;
+            localStorage.setItem('antirot_stars', stars.toString());
+            
+            document.getElementById('start-boredom-btn').style.display = 'inline-block';
+            document.getElementById('cancel-boredom-btn').style.display = 'none';
+            document.getElementById('boredom-timer').innerText = "60:00";
+            document.getElementById('challenge-display').innerText = "تم إلغاء التحدي واستسلمتِ للملل.. رفيقكِ يشعر بخيبة أمل وخسرتِ 5 نجوم 💔";
+            
+            triggerAvatarReaction('sad');
+        }
+
+        function updateStreakLogic() {
+            let streak = parseInt(localStorage.getItem('antirot_streak')) || 1;
+            const lastDateStr = localStorage.getItem('antirot_last_date');
+            const todayStr = new Date().toDateString();
+
+            if (lastDateStr && lastDateStr !== todayStr) {
+                const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+                if (lastDateStr === yesterdayStr) {
+                    streak++;
+                    localStorage.setItem('antirot_streak', streak.toString());
+                    localStorage.setItem('antirot_last_date', todayStr);
+                    localStorage.removeItem('antirot_tasks_done');
+                } else {
+                    streak = 1;
+                    localStorage.setItem('antirot_streak', '1');
+                    localStorage.setItem('antirot_last_date', todayStr);
+                    triggerAvatarReaction('sad');
+                }
+            }
+            document.getElementById('streak-count').innerText = streak;
+        }
+
+        function triggerAvatarReaction(status) {
+            const robot = document.getElementById('my-robot');
+            const mouth = document.getElementById('visual-mouth');
+            const text = document.getElementById('avatar-status-text');
+
+            if(!robot || !mouth || !text) return;
+
+            robot.classList.remove('robot-idle', 'robot-happy', 'robot-sad');
+
+            if(status === 'happy') {
+                robot.classList.add('robot-happy');
+                mouth.classList.remove('sad-mouth');
+                text.innerText = "رفيقك مبتهج وفخور! 🎉";
+                setTimeout(() => {
+                    robot.classList.remove('robot-happy');
+                    robot.classList.add('robot-idle');
+                    text.innerText = "الرفيق مستقر 🧘‍♂️";
+                }, 3000);
+            } else if(status === 'sad') {
+                robot.classList.add('robot-sad');
+                mouth.classList.add('sad-mouth');
+                text.innerText = "الرفيق حزين بسبب الانقطاع! 💔";
+                setTimeout(() => {
+                    robot.classList.remove('robot-sad');
+                    robot.classList.add('robot-idle');
+                }, 4000);
+            } else if(status === 'idle') {
+                robot.classList.add('robot-idle');
+                mouth.classList.remove('sad-mouth');
+                text.innerText = "الرفيق مستقر 🧘‍♂️";
+            }
+        }
+
+        function completeTask(taskId) {
+            const checkbox = document.getElementById(taskId);
+            const box = document.getElementById(taskId + '-box');
+            
+            let doneTasks = JSON.parse(localStorage.getItem('antirot_tasks_done')) || {};
+            
+            if(checkbox.checked) {
+                box.classList.add('completed');
+                stars += 15; 
+                triggerAvatarReaction('happy');
+                doneTasks[taskId] = true;
+            } else {
+                box.classList.remove('completed');
+                stars = Math.max(0, stars - 15);
+                doneTasks[taskId] = false;
+            }
+
+            document.getElementById('stars-count').innerText = stars;
+            localStorage.setItem('antirot_stars', stars.toString());
+            localStorage.setItem('antirot_tasks_done', JSON.stringify(doneTasks));
+        }
+
+        function handleShop(item, cost) {
+            if(!inventory[item]) {
+                if(stars >= cost) {
+                    stars -= cost;
+                    inventory[item] = true;
+                    localStorage.setItem('antirot_stars', stars.toString());
+                    localStorage.setItem('antirot_inventory', JSON.stringify(inventory));
+                    document.getElementById('stars-count').innerText = stars;
+                    alert("تم الشراء بنجاح! يمكنكِ الآن تفعيل الملحق الأنيق على رفيقكِ.");
+                    renderShopAndEquipment();
+                } else {
+                    alert("رصيد نجومكِ غير كافٍ! أتمي المزيد من مهمات الوعي اليومية.");
+                }
+            } else {
+                equipped[item] = !equipped[item];
+                localStorage.setItem('antirot_equipped', JSON.stringify(equipped));
+                renderShopAndEquipment();
+            }
+        }
+
+        function renderShopAndEquipment() {
+            const items = ['glasses', 'hat', 'scarf', 'crown', 'bow', 'cat'];
+            const prices = { glasses: 5, hat: 15, scarf: 25, crown: 40, bow: 60, cat: 100 };
+            
+            items.forEach(item => {
+                const btn = document.getElementById('btn-' + item);
+                const visual = document.getElementById('visual-' + item);
+                if(!btn || !visual) return;
+                
+                if(!inventory[item]) {
+                    btn.innerText = `شراء بـ ${prices[item]} ⭐`;
+                    btn.className = "shop-btn buy";
+                } else {
+                    if(equipped[item]) {
+                        btn.innerText = "خلع الملحق ❌";
+                        btn.className = "shop-btn";
+                        visual.style.display = "block";
+                    } else {
+                        btn.innerText = "ارتداء الملابس ✅";
+                        btn.className = "shop-btn equip";
+                        visual.style.display = "none";
+                    }
+                }
+            });
+        }
+
+        function loadTasksState() {
+            let doneTasks = JSON.parse(localStorage.getItem('antirot_tasks_done')) || {};
+            ['task1', 'task2', 'task3'].forEach(id => {
+                const cb = document.getElementById(id);
+                const box = document.getElementById(id + '-box');
+                if(doneTasks[id] && cb && box) {
+                    cb.checked = true;
+                    box.classList.add('completed');
+                }
+            });
+        }
+
+        function calculateTime() {
+            const h = document.getElementById('hoursInput').value;
+            const r = document.getElementById('calcResult');
+            const grave = document.getElementById('graveyard');
+            const graveList = document.getElementById('graveyard-list');
+
+            if(h > 0 && h <= 24) {
+                const totalDays = Math.round(h * 365 / 24);
+                r.innerHTML = `تخسرين <strong style="color:var(--accent-purple); font-size:1.4rem;">${totalDays} يوماً</strong> كاملاً من عمركِ سنوياً!`;
+                graveList.innerHTML = `
+                    <li>📚 قراءة <strong>${Math.floor(totalDays * 0.5)} كتاباً ورواية</strong> مستنيرة.</li>
+                    <li>💻 إتقان مهارات تقنية متكاملة في <strong>${Math.floor(totalDays / 12)} دورة احترافية</strong>.</li>
+                `;
+                grave.style.display = 'block';
+            } else { r.innerHTML = "أدخلي ساعات صحيحة!"; grave.style.display = 'none'; }
+        }
+
+        function setupFloatingEmojis() {
+            const leftEmojis = ["📱", "🔥", "💡", "✨", "⏳", "🫠", "🧠"];
+            const leftDiv = document.getElementById('emojis-left');
+            const rightDiv = document.getElementById('emojis-right');
+            if(!leftDiv || !rightDiv) return;
+            leftDiv.innerHTML = ""; rightDiv.innerHTML = "";
+            for(let i=0; i<12; i++) {
+                let el = document.createElement('div'); el.className = 'floating-emoji';
+                el.innerText = leftEmojis[Math.floor(Math.random()*leftEmojis.length)];
+                el.style.left = Math.random() * 70 + '%'; el.style.top = Math.random() * 90 + '%';
+                el.style.animationDelay = Math.random() * 4 + 's';
+                leftDiv.appendChild(el);
+            }
+            for(let i=0; i<12; i++) {
+                let el = document.createElement('div'); el.className = 'floating-emoji';
+                el.innerText = leftEmojis[Math.floor(Math.random()*leftEmojis.length)];
+                el.style.left = Math.random() * 70 + '%'; el.style.top = Math.random() * 90 + '%';
+                el.style.animationDelay = Math.random() * 4 + 's';
+                rightDiv.appendChild(el.cloneNode(true));
+            }
+        }
+
+        function startApp() {
+            document.getElementById('welcome-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('welcome-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'flex';
+                setTimeout(() => document.getElementById('main-app').style.opacity = '1', 50);
+            }, 600);
+        }
+
+        function goBackToWelcome() {
+            document.getElementById('main-app').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('main-app').style.display = 'none';
+                document.getElementById('welcome-screen').style.display = 'flex';
+                document.getElementById('welcome-screen').style.opacity = '1';
+            }, 500);
+        }
+
+        function openTab(event, tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>
